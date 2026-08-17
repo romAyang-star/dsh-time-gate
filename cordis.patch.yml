@@ -1,8 +1,8 @@
 # dsh-time-gate bundle patch: 把宿主插件行插入 web profile roster。
-# config.repoDir 指向本机仓库（gate.js 等脚本 + queue.json 的唯一事实源）。
-# 插件是薄封装：所有判断/队列/执行逻辑都在仓库脚本里，dsh 侧只转发。
+# 安装后必须把 config.repoDir 改成你本机仓库的绝对路径
+# （gate.js 等脚本 + config.json + queue.json 所在目录）。
 - insert:
     - id: time-gate
       name: 'dsh-time-gate'
       config:
-        repoDir: 'C:\Users\roma\.openclaw\workspace\time-gate'
+        repoDir: 'C:\path\to\your\time-gate'

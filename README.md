@@ -1,6 +1,6 @@
-# time-gate —— DeepSeek 高峰时段闸门 + 任务队列
+# dsh-time-gate —— DeepSeek 高峰时段闸门 + 任务队列
 
-> 虽然可能不会有很多人有这个需要，但是能省一点是一点嘛。认真多省省，这叫勤俭持家，学着点。高峰时段（**9:00–12:00、14:00–18:00**，Asia/Shanghai）**完全不烧 token**：
+> 高峰时段（**9:00–12:00、14:00–18:00**，Asia/Shanghai）**完全不烧 token**：
 > 新任务自动进队列，平峰按 FIFO 顺序自动执行。执行引擎 = **dsh (DeepSeek Harness) headless** ——
 > 烧 dsh 自己的 API 余额，**不碰用户选择的模型**。
 
@@ -34,18 +34,19 @@
 - **执行与决策解耦**：任务书（brief）落盘为队列项，执行完全交给 dsh
 - **监工纪律**：只上报 `failed` / 卡死（processing 超时），自动重试上限 = 0
 - **测试钩子**：`TG_SIM_TIME="HH:MM"` 可模拟任意时刻，验证闸门边界
+- **可选插件**：可安装为 dsh 宿主插件，暴露 HTTP API
 
 ## 依赖
 
 - Node.js 18+
 - [dsh (DeepSeek Harness)](https://github.com/deepseek-ai) 已安装，且已配置 `DEEPSEEK_API_KEY`（web 界面 Models 页或 `$DSH_HOME/.credentials.yaml`）
-- OpenClaw 或任意具备 cron 能力的宿主
+- 任意具备 cron 能力的宿主（如 OpenClaw）
 
 ## 安装
 
 ```powershell
-git clone <repo-url>
-cd time-gate
+git clone https://github.com/romAyang-star/dsh-time-gate
+cd dsh-time-gate
 Copy-Item config.example.json config.json   # 按本机路径修改
 ```
 
@@ -61,12 +62,8 @@ Copy-Item config.example.json config.json   # 按本机路径修改
 | tg-dispatch | 12:00, 18:00 | 平峰开始，按序消化队列 |
 | tg-supervisor | 0:00, 3:00, 6:00, 21:00 | 监工，只汇报异常 |
 
-OpenClaw 示例（isolated agentTurn）：
-
-```
-cron 0 12,18 * * *  →  node time-gate/run-task.js <id>   （循环取 next，先查 status）
-cron 0 0,3,6,21 * * * →  node time-gate/supervise.js     （无异常不打扰）
-```
+调度器逻辑：每取一个任务前先 `gate.js status`，输出 `PEAK` 就停（当前任务跑完再停），
+剩余留到下一个平峰窗口。
 
 ## 命令
 
@@ -105,17 +102,14 @@ $env:TG_SIM_TIME='13:00'; node gate.js status   # OFFPEAK
 ### 安装
 
 ```powershell
-# 1. 把插件加进 web profile 依赖并安装（需代理环境变量）
-$env:HTTPS_PROXY='http://127.0.0.1:10081'; $env:HTTP_PROXY='http://127.0.0.1:10081'
-cd Z:\dsh
+cd <dsh 安装目录>
 node_modules\.bin\dsh.cmd plugin --profile web add github:romAyang-star/dsh-time-gate
-
-# 2. 确认 Z:\dsh-home\profiles\web\package.json 的 dsh.profile.bundles 含 "dsh-time-gate"
-#    （pnpm add 会自动 reconcile；手动加依赖后重启生效）
-# 3. 重启 dsh web
+# 确认 Z:\dsh-home\profiles\web\package.json 的 dsh.profile.bundles 含 "dsh-time-gate"
+# （pnpm add 会自动 reconcile；之后重启 dsh web）
 ```
 
-> `cordis.patch.yml` 中的 `config.repoDir` 指向本机仓库路径，换机器改这一处。
+> ⚠️ 安装后编辑插件包里的 `cordis.patch.yml`，把 `config.repoDir` 改成你本机仓库的
+> 绝对路径（脚本 + config.json + queue.json 所在目录），否则 API 会报 repoDir 未配置。
 
 ### HTTP API（`/time-gate`）
 
@@ -127,27 +121,6 @@ node_modules\.bin\dsh.cmd plugin --profile web add github:romAyang-star/dsh-time
 | GET | `/time-gate/api/next` | 队首 queued id |
 | POST | `/time-gate/api/run` | 执行 `{id}`（dsh headless，重试上限 0） |
 | GET | `/time-gate/api/supervise` | 监工 |
-
-### 手机/LAN 访问（dsh web 绑定）
-
-dsh web 默认只绑 127.0.0.1，CLI 禁止 `--host 0.0.0.0`；但配置层 schema 允许，
-在 `Z:\dsh-home\profiles\web\cordis.patch.yml` 覆盖即可：
-
-```yaml
-- id: webserver
-  config:
-    host: 0.0.0.0
-    port: 3080
-```
-
-> ⚠️ **安全提醒**：dsh web 内置 agent 工具（bash/fs 等，等同于远程代码执行）且默认无鉴权。
-> 绑 0.0.0.0 会暴露给同网段所有设备，务必配合防火墙白名单或仅信任网络（如 Tailscale 子网）。
-
-> 只放行 Tailscale 网段的防火墙规则（管理员 PowerShell）：
-> ```powershell
-> New-NetFirewallRule -DisplayName 'dsh-time-gate tailnet-only allow' -Name 'dsh-time-gate-allow-tailnet' -Direction Inbound -Protocol TCP -LocalPort 3080 -RemoteAddress '100.64.0.0/10' -Action Allow -Profile Any
-> New-NetFirewallRule -DisplayName 'dsh-time-gate block others' -Name 'dsh-time-gate-block-others' -Direction Inbound -Protocol TCP -LocalPort 3080 -Action Block -Profile Any
-> ```
 
 ## License
 
