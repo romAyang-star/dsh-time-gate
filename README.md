@@ -98,9 +98,11 @@ $env:TG_SIM_TIME='13:00'; node gate.js status   # OFFPEAK
 
 ## 作为 dsh 插件安装
 
-本仓库同时是一个 **dsh (DeepSeek Harness) 插件包**（宿主插件，薄封装）：
-把 `ctx.timeGate` 服务暴露给 dsh（status / add / list / next / run / supervise），
-所有逻辑仍由仓库脚本执行 —— 单队列、单一事实源。
+本仓库同时是一个 **dsh (DeepSeek Harness) 插件包**（宿主插件，HTTP 路由版）：
+注册 `/time-gate` 路由，转发到仓库脚本执行 —— 单队列、单一事实源。
+插件入口 `lib/index.mjs`（仓库本身不设 `"type": "module"`，脚本保持 CommonJS）。
+
+### 安装
 
 ```powershell
 # 1. 把插件加进 web profile 依赖并安装（需代理环境变量）
@@ -108,12 +110,38 @@ $env:HTTPS_PROXY='http://127.0.0.1:10081'; $env:HTTP_PROXY='http://127.0.0.1:100
 cd Z:\dsh
 node_modules\.bin\dsh.cmd plugin --profile web add github:romAyang-star/dsh-time-gate
 
-# 2. 在 Z:\dsh-home\profiles\web\package.json 的 dsh.profile.bundles 里追加 "dsh-time-gate"
-# 3. 重启 dsh web：start-dsh-web.bat（已带 --host 0.0.0.0，手机/LAN 可访问）
+# 2. 确认 Z:\dsh-home\profiles\web\package.json 的 dsh.profile.bundles 含 "dsh-time-gate"
+#    （pnpm add 会自动 reconcile；手动加依赖后重启生效）
+# 3. 重启 dsh web
 ```
 
-> `cordis.patch.yml` 中的 `config.repoDir` 指向本机仓库路径；
-> 换机器时改这一处即可（也可通过 dsh settings 覆盖）。
+> `cordis.patch.yml` 中的 `config.repoDir` 指向本机仓库路径，换机器改这一处。
+
+### HTTP API（`/time-gate`）
+
+| 方法 | 路径 | 作用 |
+|---|---|---|
+| GET | `/time-gate/api/status` | 当前是否高峰 + 下次切换 |
+| POST | `/time-gate/api/add` | 入队 `{title, brief?}` |
+| GET | `/time-gate/api/list` | 队列 |
+| GET | `/time-gate/api/next` | 队首 queued id |
+| POST | `/time-gate/api/run` | 执行 `{id}`（dsh headless，重试上限 0） |
+| GET | `/time-gate/api/supervise` | 监工 |
+
+### 手机/LAN 访问（dsh web 绑定）
+
+dsh web 默认只绑 127.0.0.1，CLI 禁止 `--host 0.0.0.0`；但配置层 schema 允许，
+在 `Z:\dsh-home\profiles\web\cordis.patch.yml` 覆盖即可：
+
+```yaml
+- id: webserver
+  config:
+    host: 0.0.0.0
+    port: 3080
+```
+
+> ⚠️ **安全提醒**：dsh web 内置 agent 工具（bash/fs 等，等同于远程代码执行）且默认无鉴权。
+> 绑 0.0.0.0 会暴露给同网段所有设备，务必配合防火墙白名单或仅信任网络（如 Tailscale 子网）。
 
 ## License
 

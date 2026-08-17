@@ -2,10 +2,9 @@
   "name": "dsh-time-gate",
   "version": "0.1.0",
   "description": "DeepSeek peak-hours gate + FIFO task queue for dsh: tasks during peak (9-12, 14-18 Asia/Shanghai) are queued with zero token burn and executed via dsh headless during off-peak windows.",
-  "type": "module",
-  "main": "lib/index.js",
+  "main": "lib/index.mjs",
   "exports": {
-    ".": "./lib/index.js",
+    ".": "./lib/index.mjs",
     "./package.json": "./package.json"
   },
   "dsh": {
