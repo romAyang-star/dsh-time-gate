@@ -96,6 +96,25 @@ $env:TG_SIM_TIME='13:00'; node gate.js status   # OFFPEAK
 
 `queued -> processing -> done | failed`（failed 是终点，不自动重试）
 
+## 作为 dsh 插件安装
+
+本仓库同时是一个 **dsh (DeepSeek Harness) 插件包**（宿主插件，薄封装）：
+把 `ctx.timeGate` 服务暴露给 dsh（status / add / list / next / run / supervise），
+所有逻辑仍由仓库脚本执行 —— 单队列、单一事实源。
+
+```powershell
+# 1. 把插件加进 web profile 依赖并安装（需代理环境变量）
+$env:HTTPS_PROXY='http://127.0.0.1:10081'; $env:HTTP_PROXY='http://127.0.0.1:10081'
+cd Z:\dsh
+node_modules\.bin\dsh.cmd plugin --profile web add github:romAyang-star/dsh-time-gate
+
+# 2. 在 Z:\dsh-home\profiles\web\package.json 的 dsh.profile.bundles 里追加 "dsh-time-gate"
+# 3. 重启 dsh web：start-dsh-web.bat（已带 --host 0.0.0.0，手机/LAN 可访问）
+```
+
+> `cordis.patch.yml` 中的 `config.repoDir` 指向本机仓库路径；
+> 换机器时改这一处即可（也可通过 dsh settings 覆盖）。
+
 ## License
 
 MIT

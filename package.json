@@ -1,0 +1,63 @@
+{
+  "name": "dsh-time-gate",
+  "version": "0.1.0",
+  "description": "DeepSeek peak-hours gate + FIFO task queue for dsh: tasks during peak (9-12, 14-18 Asia/Shanghai) are queued with zero token burn and executed via dsh headless during off-peak windows.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "plugin": {
+      "displayName": {
+        "zh": "高峰时段闸门",
+        "en": "Peak Time Gate"
+      },
+      "description": {
+        "zh": "DeepSeek 高峰时段(9-12/14-18)不烧 token：任务自动入队，平峰用 dsh headless 按序执行；监工只汇报，重试上限 0",
+        "en": "Zero token burn during DeepSeek peak hours: queue tasks, execute FIFO via dsh headless in off-peak; supervisor reports only, no auto retry"
+      },
+      "categories": [
+        "automation",
+        "cost",
+        "scheduler"
+      ],
+      "aliases": [
+        "time-gate",
+        "高峰",
+        "闸门",
+        "队列",
+        "queue",
+        "peak"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "gate.js",
+    "run-task.js",
+    "supervise.js",
+    "config.example.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "queue",
+    "peak-hours",
+    "cost",
+    "scheduler",
+    "plugin"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romAyang-star/dsh-time-gate.git"
+  }
+}
