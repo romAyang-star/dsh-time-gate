@@ -143,6 +143,12 @@ dsh web 默认只绑 127.0.0.1，CLI 禁止 `--host 0.0.0.0`；但配置层 sche
 > ⚠️ **安全提醒**：dsh web 内置 agent 工具（bash/fs 等，等同于远程代码执行）且默认无鉴权。
 > 绑 0.0.0.0 会暴露给同网段所有设备，务必配合防火墙白名单或仅信任网络（如 Tailscale 子网）。
 
+> 只放行 Tailscale 网段的防火墙规则（管理员 PowerShell）：
+> ```powershell
+> New-NetFirewallRule -DisplayName 'dsh-time-gate tailnet-only allow' -Name 'dsh-time-gate-allow-tailnet' -Direction Inbound -Protocol TCP -LocalPort 3080 -RemoteAddress '100.64.0.0/10' -Action Allow -Profile Any
+> New-NetFirewallRule -DisplayName 'dsh-time-gate block others' -Name 'dsh-time-gate-block-others' -Direction Inbound -Protocol TCP -LocalPort 3080 -Action Block -Profile Any
+> ```
+
 ## License
 
 MIT
