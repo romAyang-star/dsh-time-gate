@@ -1,0 +1,5 @@
+# 机器状态与密钥 —— 不入库
+config.json
+queue.json
+*.tmp
+node_modules/
